@@ -16,8 +16,8 @@ struct TNode {
     TNode* Childs[ALPHABET_SIZE];
 
 private:
-    TNode(const TNode& other);
-    TNode& operator=(const TNode& other);
+    TNode(const TNode&);
+    TNode& operator=(const TNode&);
 };
 
 struct TDataItem {
