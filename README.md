@@ -46,13 +46,23 @@ private:
     TNode(const TNode& other);
     TNode& operator=(const TNode& other);
 };
+```
 
+Таким образом, высота дерева не превышает длины самого длинного слова в тексте.
+
+Затем, когда весь текст обработан деревом, складываем структуру
+```cpp
 struct TDataItem {
     std::string Word;
     size_t Count;
 };
 ```
-Таким образом, высота дерева не превышает длины самого длинного слова в тексте
+в std::vector и сортируем стабильной сортировкой со следующим компаратором:
+```cpp
+bool Comparator(const TDataItem& lhs, const TDataItem& rhs) {
+    return lhs.Count > rhs.Count;
+}
+```
 
 ## Сборка
 
