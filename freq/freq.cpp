@@ -1,137 +1,108 @@
 #include "freq.hpp"
 
 #include <algorithm>
+#include <cstring>
+#include <string>
 
-TFreq::TFreq(const std::string& inputFilename) {
-    Root = new TNode("");
-    std::ifstream inputFile(inputFilename.c_str());
-    if (!inputFile.is_open()) {
-        std::runtime_error("Couldn't open input file" + inputFilename);
-    }
+namespace {
 
-    ReadData(inputFile);
+bool Comparator(const TDataItem &lhs, const TDataItem &rhs) {
+  return lhs.Count > rhs.Count;
 }
 
-TFreq::~TFreq() {
-    DeleteNode(Root);
+} // namespace
+
+TNode::TNode(TNode *parent) : Count(0), Index(0), Parent(parent) {
+  memset(Childs, 0, sizeof(Childs));
 }
 
-void TFreq::AddWord(const std::string& word) {
-    TNode* node = Root;
-    while (node) {
-        int result = node->Word.compare(word);
-        if (!result) {
-            node->Count++;
-            break;
-        } else if (result < 0) {
-            if (node->Left) {
-                node = node->Left;
-                continue;
-            } else {
-                node->Left = new TNode(word, 1);
-                break;
-            }
-        } else {
-            if (node->Right) {
-                node = node->Right;
-                continue;
-            } else {
-                node->Right = new TNode(word, 1);
-                break;
-            }
-        }
-    }
+TNode::~TNode() {
+  for (size_t i = 0; i < ALPHABET_SIZE; ++i) {
+    delete Childs[i];
+  }
 }
 
-void TFreq::DeleteNode(TNode* node) {
-    if (node == NULL) {
-        return;
-    }
+TFreq::TFreq(const std::string &inputFilename) {
+  Root = new TNode(0);
+  std::ifstream inputFile(inputFilename.c_str());
+  if (!inputFile.is_open()) {
+    std::runtime_error("Couldn't open input file" + inputFilename);
+  }
 
-    if (node->Left) {
-        DeleteNode(node->Left);
-    }
-
-    if (node->Right) {
-        DeleteNode(node->Right);
-    }
-
-    delete node;
+  ReadData(inputFile);
 }
+
+TFreq::~TFreq() { delete Root; }
 
 void TFreq::Analyze() {
-    if (Root->Left) {
-        NodeToDataVector(Root->Left);
-    }
-
-    if (Root->Right) {
-        NodeToDataVector(Root->Right);
-    }
-    std::sort(Data.begin(), Data.end());
+  MakeDataVector();
+  std::stable_sort(Data.begin(), Data.end(), Comparator);
 }
 
-void TFreq::SaveData(const std::string& outputFilename) {
-    std::ofstream outputFile(outputFilename.c_str());
-    if (!outputFile.is_open()) {
-        std::runtime_error("Couldn't open output file" + outputFilename);
-    }
+void TFreq::SaveData(const std::string &outputFilename) {
+  std::ofstream outputFile(outputFilename.c_str());
+  if (!outputFile.is_open()) {
+    std::runtime_error("Couldn't open output file" + outputFilename);
+  }
 
-    for (std::vector<TDataItem>::iterator it = Data.begin(); it < Data.end(); ++it) {
-        outputFile << it->Data << "\t" << it->Count << std::endl;
-    }
+  for (std::vector<TDataItem>::iterator it = Data.begin(); it < Data.end();
+       ++it) {
+    outputFile << it->Word << "\t" << it->Count << std::endl;
+  }
 }
 
-void TFreq::ReadData(std::ifstream& inputFile) {
-    std::string line;
-    char c;
-    std::string word;
-    while (std::getline(inputFile, line)) {
-        for (size_t i = 0; i < line.length(); i++) {
-            c = line.at(i);
-            if (std::isalpha(c, std::locale::classic())) {
-                word.append(1, std::tolower(c, std::locale::classic()));
-            } else {
-                if (word.size()) {
-                    AddWord(word);
-                    word.clear();
-                }
-            }
+void TFreq::ReadData(std::ifstream &inputFile) {
+  TNode *current = Root;
+  std::string line;
+  char symbol;
+  while (std::getline(inputFile, line)) {
+    for (size_t i = 0; i < line.length(); ++i) {
+      symbol = line[i];
+      if (std::isalpha(symbol, std::locale::classic())) {
+        int index = std::tolower(symbol, std::locale::classic()) - 'a';
+
+        if (!current->Childs[index]) {
+          current->Childs[index] = new TNode(current);
         }
+        current = current->Childs[index];
+      } else {
+        if (current != Root) {
+          ++current->Count;
+          current = Root;
+        }
+      }
     }
+
+    if (current != Root) {
+      ++current->Count;
+    }
+  }
 }
 
-void TFreq::NodeToDataVector(TNode* node) {
-    if (node == NULL) {
-        return;
+void TFreq::MakeDataVector() {
+  std::string word;
+  TNode *current = Root;
+
+  while (current) {
+    if (current->Count > 0) {
+      Data.resize(Data.size() + 1);
+      Data.back().Word = word;
+      Data.back().Count = current->Count;
     }
-
-    TDataItem item = {node->Count, node->Word};
-    Data.push_back(item);
-
-    if (node->Left) {
-        NodeToDataVector(node->Left);
+    bool foundChild = false;
+    for (size_t i = current->Index; i < ALPHABET_SIZE && !foundChild; ++i) {
+      if (current->Childs[i]) {
+        word.push_back(static_cast<char>('a' + i));
+        current->Index = i + 1;
+        current = current->Childs[i];
+        foundChild = true;
+      }
     }
-
-    if (node->Right) {
-        NodeToDataVector(node->Right);
+    if (!foundChild) {
+      current = current->Parent;
+      if (!word.empty()) {
+        word.resize(word.size() - 1);
+      }
     }
-}
-
-bool TFreq::TDataItem::operator<(const TFreq::TDataItem& rhs) {
-    if (Count > rhs.Count) {
-        return true;
-    }
-
-    if (Count < rhs.Count) {
-        return false;
-    }
-
-    if (Data < rhs.Data) {
-        return true;
-    }
-
-    return false;
-}
-
-TFreq::TNode::TNode(const std::string& word, unsigned int count) : Word(word), Count(count) {
+  }
 }
