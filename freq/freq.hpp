@@ -37,7 +37,7 @@ private:
     TFreq(const TFreq&);
     const TFreq& operator=(const TFreq&);
 
-    void ReadData(std::ifstream& inputFile);
+    void ReadData(const std::string& inputFilename);
     void MakeDataVector();
 
 private:

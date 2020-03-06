@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <cstdio>
 
 namespace {
 
@@ -24,12 +25,7 @@ TNode::~TNode() {
 
 TFreq::TFreq(const std::string& inputFilename) {
     Root = new TNode(0);
-    std::ifstream inputFile(inputFilename.c_str());
-    if (!inputFile.is_open()) {
-        std::runtime_error("Couldn't open input file" + inputFilename);
-    }
-
-    ReadData(inputFile);
+    ReadData(inputFilename);
 }
 
 TFreq::~TFreq() {
@@ -52,15 +48,23 @@ void TFreq::SaveData(const std::string& outputFilename) {
     }
 }
 
-void TFreq::ReadData(std::ifstream& inputFile) {
+void TFreq::ReadData(const std::string& inputFilename) {
     TNode* current = Root;
-    std::string line;
-    char symbol;
-    while (std::getline(inputFile, line)) {
-        for (size_t i = 0; i < line.length(); ++i) {
-            symbol = line[i];
-            if (std::isalpha(symbol, std::locale::classic())) {
-                int index = std::tolower(symbol, std::locale::classic()) - 'a';
+    char buffer[4 * 1024];
+    size_t readBytes = 0;
+    int index = 0;
+    FILE* inputFile = fopen(inputFilename.c_str(), "rb");
+    if (inputFile == nullptr) {
+        std::runtime_error("Couldn't open input file" + inputFilename);
+    }
+    while ((readBytes = fread(buffer, 1, sizeof(buffer), inputFile)) > 0) {
+        for (size_t i = 0; i < readBytes; ++i) {
+            if ((buffer[i] >= 'A') && (buffer[i] <= 'Z')) {
+                buffer[i] |= 0x20; // приводим к нижнему регистру
+            }
+
+            if ((buffer[i] >= 'a') && (buffer[i] <= 'z')) {
+                index = buffer[i] - 'a';
 
                 if (!current->Childs[index]) {
                     current->Childs[index] = new TNode(current);
@@ -74,10 +78,9 @@ void TFreq::ReadData(std::ifstream& inputFile) {
             }
         }
 
-        if (current != Root) {
-            ++current->Count;
-        }
+        memset(buffer, 0, sizeof(buffer));
     }
+    fclose(inputFile);
 }
 
 void TFreq::MakeDataVector() {
@@ -89,9 +92,10 @@ void TFreq::MakeDataVector() {
             Data.resize(Data.size() + 1);
             Data.back().Word = word;
             Data.back().Count = current->Count;
+            current->Count = 0;
         }
         bool foundChild = false;
-        for (size_t i = current->Index; i < ALPHABET_SIZE && !foundChild; ++i) {
+        for (auto i = current->Index; i < ALPHABET_SIZE && !foundChild; ++i) {
             if (current->Childs[i]) {
                 word.push_back(static_cast<char>('a' + i));
                 current->Index = i + 1;

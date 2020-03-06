@@ -6,7 +6,7 @@ set(ALL_CXX_SOURCE_FILES
         freq/freq.hpp
         freq/main.cpp)
 
-set(CMAKE_CXX_STANDARD 98)
+set(CMAKE_CXX_STANDARD 11)
 
 include_directories(.)
 include_directories(freq)

@@ -9,8 +9,8 @@ int main(int argc, char* argv[]) {
         if (argc < 3) {
             std::cerr << "Incorrect number of arguments (" << argc << ")" << std::endl;
             std::cerr << "Usage: ./freq in.txt out.txt" << std::endl;
+            return 1;
         }
-
         TFreq freq(argv[1]);
         freq.Analyze();
         freq.SaveData(argv[2]);
