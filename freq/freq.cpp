@@ -75,6 +75,7 @@ void TFreq::ReadData(std::string inputFilename) {
     // Получаем инфу о файле
     struct stat fs;
     if (fstat(fd, &fs) == -1) {
+        close(fd);
         std::runtime_error("Couldn't receive info about input file " + inputFilename);
     }
 
