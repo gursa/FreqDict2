@@ -29,7 +29,7 @@ TNode::TNode(TNode* parent) : Count(0), Index(0), Parent(parent) {
 }
 
 TNode::~TNode() {
-    for (std::size_t i = 0; i < ALPHABET_SIZE; ++i) {
+    for (size_t i = 0; i < ALPHABET_SIZE; ++i) {
         delete Childs[i];
     }
 }
@@ -124,9 +124,7 @@ void TFreq::MakeDataVector() {
 
     while (current) {
         if (current->Count > 0) {
-            Data.resize(Data.size() + 1);
-            Data.back().Word = word;
-            Data.back().Count = current->Count;
+            Data.emplace_back(word, current->Count);
             current->Count = 0;
         }
         bool foundChild = false;

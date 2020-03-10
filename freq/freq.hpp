@@ -4,14 +4,14 @@
 #include <fstream>
 #include <vector>
 
-constexpr std::size_t ALPHABET_SIZE = 26;
+constexpr size_t ALPHABET_SIZE = 26;
 
 struct TNode {
     TNode(TNode* parent);
     ~TNode();
 
-    std::size_t Count;
-    std::size_t Index;
+    size_t Count;
+    size_t Index;
     TNode* Parent;
     TNode* Childs[ALPHABET_SIZE];
 
@@ -22,7 +22,8 @@ private:
 
 struct TDataItem {
     std::string Word;
-    std::size_t Count;
+    size_t Count;
+    TDataItem(std::string& word, size_t count) : Word(word), Count(count) {}
 };
 
 class TFreq {
