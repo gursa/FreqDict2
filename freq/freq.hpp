@@ -4,14 +4,14 @@
 #include <fstream>
 #include <vector>
 
-const size_t ALPHABET_SIZE = 26;
+constexpr std::size_t ALPHABET_SIZE = 26;
 
 struct TNode {
     TNode(TNode* parent);
     ~TNode();
 
-    size_t Count;
-    size_t Index;
+    std::size_t Count;
+    std::size_t Index;
     TNode* Parent;
     TNode* Childs[ALPHABET_SIZE];
 
@@ -22,22 +22,22 @@ private:
 
 struct TDataItem {
     std::string Word;
-    size_t Count;
+    std::size_t Count;
 };
 
 class TFreq {
 public:
-    TFreq(const std::string& inputFilename);
+    explicit TFreq(std::string inputFilename);
     virtual ~TFreq();
 
     void Analyze();
     void SaveData(const std::string& outputFilename);
 
 private:
-    TFreq(const TFreq&);
-    const TFreq& operator=(const TFreq&);
+    TFreq(const TFreq&) = delete;
+    const TFreq& operator=(const TFreq&) = delete;
 
-    void ReadData(const std::string& inputFilename);
+    void ReadData(std::string inputFilename);
     void MakeDataVector();
 
 private:

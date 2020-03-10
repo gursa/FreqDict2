@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
-#include <cstdio>
 
 namespace {
 
@@ -18,14 +17,14 @@ TNode::TNode(TNode* parent) : Count(0), Index(0), Parent(parent) {
 }
 
 TNode::~TNode() {
-    for (size_t i = 0; i < ALPHABET_SIZE; ++i) {
+    for (std::size_t i = 0; i < ALPHABET_SIZE; ++i) {
         delete Childs[i];
     }
 }
 
-TFreq::TFreq(const std::string& inputFilename) {
-    Root = new TNode(0);
-    ReadData(inputFilename);
+TFreq::TFreq(std::string inputFilename) {
+    Root = new TNode(nullptr);
+    ReadData(std::move(inputFilename));
 }
 
 TFreq::~TFreq() {
@@ -43,22 +42,26 @@ void TFreq::SaveData(const std::string& outputFilename) {
         std::runtime_error("Couldn't open output file" + outputFilename);
     }
 
-    for (std::vector<TDataItem>::iterator it = Data.begin(); it < Data.end(); ++it) {
-        outputFile << it->Word << "\t" << it->Count << std::endl;
+    for (auto& item : Data) {
+        outputFile << item.Word << "\t" << item.Count << std::endl;
     }
 }
 
-void TFreq::ReadData(const std::string& inputFilename) {
+void TFreq::ReadData(std::string inputFilename) {
+    constexpr auto bufferSize = 64 * 1024;
     TNode* current = Root;
-    char buffer[4 * 1024];
-    size_t readBytes = 0;
-    int index = 0;
-    FILE* inputFile = fopen(inputFilename.c_str(), "rb");
-    if (inputFile == nullptr) {
+    char buffer[bufferSize];
+    std::ifstream inputFile(inputFilename, std::ios::binary);
+    if (!inputFile.good()) {
         std::runtime_error("Couldn't open input file" + inputFilename);
     }
-    while ((readBytes = fread(buffer, 1, sizeof(buffer), inputFile)) > 0) {
-        for (size_t i = 0; i < readBytes; ++i) {
+
+    std::size_t readBytes = 0;
+    int index = 0;
+    while (1) {
+        inputFile.read(buffer, bufferSize);
+        readBytes = inputFile ? bufferSize : static_cast<std::size_t>(inputFile.gcount());
+        for (std::size_t i = 0; i < readBytes; ++i) {
             if ((buffer[i] >= 'A') && (buffer[i] <= 'Z')) {
                 buffer[i] |= 0x20; // приводим к нижнему регистру
             }
@@ -78,9 +81,13 @@ void TFreq::ReadData(const std::string& inputFilename) {
             }
         }
 
-        memset(buffer, 0, sizeof(buffer));
+        memset(buffer, 0, bufferSize);
+
+        if (!inputFile) {
+            break;
+        }
     }
-    fclose(inputFile);
+    inputFile.close();
 }
 
 void TFreq::MakeDataVector() {
