@@ -3,6 +3,18 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <cstdio>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <errno.h>
+#include <err.h>
+
+#include <sys/sysinfo.h>
+#include <vector>
 
 namespace {
 
@@ -43,25 +55,44 @@ void TFreq::SaveData(const std::string& outputFilename) {
     }
 
     for (auto& item : Data) {
-        outputFile << item.Word << "\t" << item.Count << std::endl;
+        outputFile << item.Count << "\t" << item.Word << std::endl;
     }
 }
 
 void TFreq::ReadData(std::string inputFilename) {
-    constexpr auto bufferSize = 64 * 1024;
-    TNode* current = Root;
-    char buffer[bufferSize];
-    std::ifstream inputFile(inputFilename, std::ios::binary);
-    if (!inputFile.good()) {
-        std::runtime_error("Couldn't open input file" + inputFilename);
+    // Получаем инфу о ресурсах системы (хотим понять, сколько места можем занять в оперативе)
+    struct sysinfo info;
+    if (sysinfo(&info) < 0) {
+        throw std::runtime_error("Couldn't receive system info");
     }
 
-    std::size_t readBytes = 0;
+    // Открываем файл на чтение
+    auto fd = open(inputFilename.c_str(), O_RDONLY);
+    if (fd == -1) {
+        std::runtime_error("Couldn't open input file " + inputFilename);
+    }
+
+    // Получаем инфу о файле
+    struct stat fs;
+    if (fstat(fd, &fs) == -1) {
+        std::runtime_error("Couldn't receive info about input file " + inputFilename);
+    }
+
+    // Определяем размер порции для чтение как минимальное число между половиной доступного нам места и размером файла
+    size_t bufferSize
+        = (static_cast<size_t>(fs.st_size) < info.freeram) ? static_cast<size_t>(fs.st_size) : info.freeram / 2;
+
+    TNode* current = Root;
+    std::vector<char> buffer;
+    buffer.reserve(bufferSize);
+    ssize_t readBytes = 0;
     int index = 0;
     while (1) {
-        inputFile.read(buffer, bufferSize);
-        readBytes = inputFile ? bufferSize : static_cast<std::size_t>(inputFile.gcount());
-        for (std::size_t i = 0; i < readBytes; ++i) {
+        readBytes = read(fd, buffer.data(), buffer.capacity());
+        if (readBytes <= 0) {
+            break;
+        }
+        for (size_t i = 0; i < readBytes; ++i) {
             if ((buffer[i] >= 'A') && (buffer[i] <= 'Z')) {
                 buffer[i] |= 0x20; // приводим к нижнему регистру
             }
@@ -81,13 +112,10 @@ void TFreq::ReadData(std::string inputFilename) {
             }
         }
 
-        memset(buffer, 0, bufferSize);
-
-        if (!inputFile) {
-            break;
-        }
+        buffer.clear();
     }
-    inputFile.close();
+
+    close(fd);
 }
 
 void TFreq::MakeDataVector() {

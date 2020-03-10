@@ -14,7 +14,6 @@ int main(int argc, char* argv[]) {
         TFreq freq(argv[1]);
         freq.Analyze();
         freq.SaveData(argv[2]);
-
     } catch (const std::exception& ex) {
         std::cerr << "[Exception] " << ex.what() << std::endl;
     }
