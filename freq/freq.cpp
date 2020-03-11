@@ -67,7 +67,7 @@ void TFreq::Analyze() {
 void TFreq::SaveData(const std::string& outputFilename) {
     std::ofstream outputFile(outputFilename.c_str());
     if (!outputFile.is_open()) {
-        std::runtime_error(MakeErrorMessage("Couldn't open output file: ", outputFilename));
+        throw std::runtime_error(MakeErrorMessage("Couldn't open output file: ", outputFilename));
     }
 
     for (auto& item : Data) {
@@ -79,20 +79,22 @@ void TFreq::ReadData(std::string inputFilename) {
     // Получаем инфу о ресурсах системы (хотим понять, сколько места можем занять в оперативе)
     struct sysinfo info;
     if (sysinfo(&info) < 0) {
-        throw std::runtime_error(MakeErrorMessage("Couldn't receive system info: ", std::strerror(errno)));
+        throw std::runtime_error(
+            MakeErrorMessage("Couldn't receive system info: ", std::strerror(errno)));
     }
 
     // Открываем файл на чтение
     auto fd = open(inputFilename.c_str(), O_RDONLY);
     if (fd == -1) {
-        std::runtime_error(MakeErrorMessage("Couldn't open input file (", inputFilename, "): ", std::strerror(errno)));
+        throw std::runtime_error(
+            MakeErrorMessage("Couldn't open input file (", inputFilename, "): ", std::strerror(errno)));
     }
 
     // Получаем инфу о файле
     struct stat fs;
     if (fstat(fd, &fs) == -1) {
         close(fd);
-        std::runtime_error(
+        throw std::runtime_error(
             MakeErrorMessage("Couldn't receive info about input file (", inputFilename, "): ", std::strerror(errno)));
     }
 

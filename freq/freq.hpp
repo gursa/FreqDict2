@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 constexpr size_t ALPHABET_SIZE = 26;
