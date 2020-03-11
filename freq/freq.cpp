@@ -2,24 +2,41 @@
 
 #include <algorithm>
 #include <cstring>
-#include <string>
 #include <cstdio>
+#include <sstream>
+#include <string>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
 #include <errno.h>
-#include <err.h>
-
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/sysinfo.h>
-#include <vector>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace {
 
 bool Comparator(const TDataItem& lhs, const TDataItem& rhs) {
     return lhs.Count > rhs.Count;
+}
+
+template <typename T>
+void LogErrorItem(std::ostream& msg, T item) {
+    msg << item;
+}
+
+
+template <typename T, typename... Args>
+void LogErrorItem(std::ostream& msg, T item, Args... args) // recursive variadic function
+{
+    LogErrorItem(msg, item);
+    LogErrorItem(msg, args...);
+}
+
+template <typename... Args>
+std::string MakeErrorMessage(Args... args) {
+    std::ostringstream oss;
+    LogErrorItem(oss, args...);
+    return oss.str();
 }
 
 } // namespace
@@ -34,8 +51,7 @@ TNode::~TNode() {
     }
 }
 
-TFreq::TFreq(std::string inputFilename) {
-    Root = new TNode(nullptr);
+TFreq::TFreq(std::string inputFilename) : Root(new TNode(nullptr)) {
     ReadData(std::move(inputFilename));
 }
 
@@ -51,7 +67,7 @@ void TFreq::Analyze() {
 void TFreq::SaveData(const std::string& outputFilename) {
     std::ofstream outputFile(outputFilename.c_str());
     if (!outputFile.is_open()) {
-        std::runtime_error("Couldn't open output file" + outputFilename);
+        std::runtime_error(MakeErrorMessage("Couldn't open output file: ", outputFilename));
     }
 
     for (auto& item : Data) {
@@ -63,20 +79,21 @@ void TFreq::ReadData(std::string inputFilename) {
     // Получаем инфу о ресурсах системы (хотим понять, сколько места можем занять в оперативе)
     struct sysinfo info;
     if (sysinfo(&info) < 0) {
-        throw std::runtime_error("Couldn't receive system info");
+        throw std::runtime_error(MakeErrorMessage("Couldn't receive system info: ", std::strerror(errno)));
     }
 
     // Открываем файл на чтение
     auto fd = open(inputFilename.c_str(), O_RDONLY);
     if (fd == -1) {
-        std::runtime_error("Couldn't open input file " + inputFilename);
+        std::runtime_error(MakeErrorMessage("Couldn't open input file (", inputFilename, "): ", std::strerror(errno)));
     }
 
     // Получаем инфу о файле
     struct stat fs;
     if (fstat(fd, &fs) == -1) {
         close(fd);
-        std::runtime_error("Couldn't receive info about input file " + inputFilename);
+        std::runtime_error(
+            MakeErrorMessage("Couldn't receive info about input file (", inputFilename, "): ", std::strerror(errno)));
     }
 
     // Определяем размер порции для чтение как минимальное число между половиной доступного нам места и размером файла
@@ -93,7 +110,7 @@ void TFreq::ReadData(std::string inputFilename) {
         if (readBytes <= 0) {
             break;
         }
-        for (size_t i = 0; i < readBytes; ++i) {
+        for (size_t i = 0; i < static_cast<size_t>(readBytes); ++i) {
             if ((buffer[i] >= 'A') && (buffer[i] <= 'Z')) {
                 buffer[i] |= 0x20; // приводим к нижнему регистру
             }
